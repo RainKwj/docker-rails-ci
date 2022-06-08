@@ -17,7 +17,7 @@ references:
 jobs:
   test_rspec:
     docker:
-      - image: hatd/circle-ci:3.0
+      - image: thanhnc1993/circle-ci:3.0
         <<: *ruby_envs
       - image: mysql:5.7.33
         <<: *mysql_envs
