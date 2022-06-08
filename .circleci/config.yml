@@ -26,24 +26,48 @@ jobs:
       - run:
           name: Which bundler?
           command: bundle -v
+      - restore_cache:
+          keys:
+            - v1-gem-cache-{{ checksum "Gemfile.lock" }}
+            - v1-gem-cache-
       - run:
           name: Bundle Install
           command: bundle check || bundle install --jobs=4 --retry=3
+      - save_cache:
+          key: v1-gem-cache-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
       - run:
           name: Build assets
           command: bundle exec rails assets:precompile
+      - run:
+          name: Grant script permission
+          command: chmod a+x wait-for-it.sh
+      - run:
+          name: Wait db
+          command: ./wait-for-it.sh 127.0.0.1:3306 --timeout=300 -- echo 'Mysql service is ready!'
       - run:
           name: Database setup
           command: RAILS_ENV=test bundle exec rails db:drop db:create
       - run:
           name: Run Migrate
           command: RAILS_ENV=test bundle exec rails db:migrate
-      - run:
-          name: Rubocop test
-          command: bundle exec rubocop
+      # - run:
+      #     name: Rubocop test
+      #     command: bundle exec rubocop
       - run:
           name: Rspec test
-          command: bundle exec rspec spec/
+          command: |
+            mkdir ~/rspec
+            bundle exec rspec --format progress --format RspecJunitFormatter -o ~/rspec/rspec.xml
+            mv coverage ~/rspec/coverage
+          no_output_timeout: 20m
+      # collect reports
+      - store_test_results:
+          path: ~/rspec
+
+      - store_artifacts:
+          path: ~/rspec
 workflows:
   version: 2
   test:
